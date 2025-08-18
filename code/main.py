@@ -72,5 +72,69 @@ def getRepositories(query, repos_per_page, cursor):
         return json_response
     else:
         raise Exception(f"Falha na requisição: Status {response.status_code}\n{response.text}")
+
+# Função que utiliza a função getRepositories para obter os repositórios e extrair as informações desejadas usando paginação
+# Cria um loop que continua enquanto o número de repositórios coletados for menor que o número total de repositórios
+# Coleta os repositórios em páginas com 20 repositórios por página 
+# Para cada repositório coletado suas informações são escritas em formato json
+# O loop continua até não haver uma nova página com mais 20 repositórios para serem lidas
+# Retorna o dicionário com o número total de repositórios coletados
+#   :param int num_repos: O número total de repositórios que devem ser coletados.
+
+def getInformation(num_repos):
     
+    collected_repos = []
+    cursor = None  
+    repos_per_page = 20  
+    query = "stars:>1 sort:stars-desc"
+
+
+    while len(collected_repos) < num_repos:
+        json_response = getRepositories(query, repos_per_page, cursor)
+        
+        edges = json_response["data"]["search"]["edges"]
+        page_info = json_response["data"]["search"]["pageInfo"]
+        
+        for edge in edges:
+            if len(collected_repos) >= num_repos:
+                break
+            
+            node = edge["node"]
+            
+            this_repo = {
+                'name': node["nameWithOwner"],
+                'createdAt': node["createdAt"],
+                'pushedAt': node["pushedAt"],
+                'primaryLanguage': 'N/A' if not node["primaryLanguage"] else node["primaryLanguage"]["name"],
+                'mergedPRs': node["pullRequests"]["totalCount"],
+                'releases': node["releases"]["totalCount"],
+                'totalIssues': node["issues"]["totalCount"],
+                'closedIssues': node["closedIssues"]["totalCount"]
+            }
+            collected_repos.append(this_repo)
+
+
+        if page_info["hasNextPage"]:
+            cursor = page_info["endCursor"]
+        else:
+            break 
+            
+    return collected_repos
+
+
+if _name_ == '_main_':
+    num_repositories = 100
+    collected_repos = getInformation(num_repositories)
+
+# Print dos repositórios para teste
+    for repo in collected_repos:
+        print(f"Repository: {repo['name']}")
+        print(f"  Created at: {repo['createdAt']}")
+        print(f"  Last push: {repo['pushedAt']}")
+        print(f"  Primary language: {repo['primaryLanguage']}")
+        print(f"  Merged PRs: {repo['mergedPRs']}")
+        print(f"  Releases: {repo['releases']}")
+        print(f"  Total Issues: {repo['totalIssues']}")
+        print(f"  Closed Issues: {repo['closedIssues']}")
+        print()    
     
