@@ -1,6 +1,7 @@
 import os
 import requests
 from dotenv import load_dotenv
+import csv
 
 # Carrega o token do GitHub a partir de uma variável de ambiente para maior proteção
 load_dotenv()
@@ -85,7 +86,7 @@ def getInformation(num_repos):
     
     collected_repos = []
     cursor = None  
-    repos_per_page = 20  
+    repos_per_page = 10
     query = "stars:>1 sort:stars-desc"
 
 
@@ -122,19 +123,34 @@ def getInformation(num_repos):
     return collected_repos
 
 
-if _name_ == '_main_':
-    num_repositories = 100
-    collected_repos = getInformation(num_repositories)
+# Função para salvar os dados coletados em um arquivo CSV
+# Esta função recebe uma lista de dicionários contendo as informações dos repositórios e o nome do arquivo CSV a ser criado.
+# Usa a biblioteca csv do Python para escrever os dados no arquivo.
+#   :param list repo_list: A lista de dicionários contendo os dados dos repositórios.
+#   :param str filename: O nome do arquivo CSV a ser criado.
+def save_to_csv(repo_list, filename='collected_repos.csv'):
 
-# Print dos repositórios para teste
-    for repo in collected_repos:
-        print(f"Repository: {repo['name']}")
-        print(f"  Created at: {repo['createdAt']}")
-        print(f"  Last push: {repo['pushedAt']}")
-        print(f"  Primary language: {repo['primaryLanguage']}")
-        print(f"  Merged PRs: {repo['mergedPRs']}")
-        print(f"  Releases: {repo['releases']}")
-        print(f"  Total Issues: {repo['totalIssues']}")
-        print(f"  Closed Issues: {repo['closedIssues']}")
-        print()    
-    
+    headers = repo_list[0].keys()
+
+    try:
+        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=headers)
+            
+            writer.writeheader()
+            writer.writerows(repo_list)
+
+    except IOError as e:
+        print(f"\nOcorreu um erro ao salvar o arquivo CSV: {e}")
+
+
+if __name__ == '__main__':
+    try:
+        num_repositories = 1000 
+        collected_repos = getInformation(num_repositories)
+
+        
+        if collected_repos:
+            save_to_csv(collected_repos, f'collected_repos.csv')
+
+    except Exception as e:
+        print(f"\nO script falhou: {e}")
